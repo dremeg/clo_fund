@@ -65,8 +65,8 @@ def scatter3d(r, title, fname):
     plt.show()
 
 #makes the dependent variable (irr) for modeling purposes
-def dependent(default_prob, recovery_rate, n, share_price = None):
-    return [irr(Fund(default_prob, recovery_rate, share_price).gen_cash_flows()) for x in range(n)]
+def dependent(recovery_rate, n, share_price = None):
+    return irr(Fund(recovery_rate, share_price).gen_cash_flows())
 
 class Loan:
 
@@ -164,7 +164,7 @@ class CLO:
 
     #pre-input default prob and recovery rate are meant to be overridden, in there for simplicity
     #creates tranches with sizes based on an actual CLO
-    def __init__(self, default_prob = {"tech": 1, "health": 0.5, "standard": 0}, recovery_rate = .5):
+    def __init__(self, recovery_rate = .5, default_prob = {"tech": .1, "health": 0.1, "standard": 0.02}):
         self.default_prob = default_prob
         self.recovery_rate = recovery_rate
         self.assets = [Loan((1 + random.randint(2, 6)) * 1000000, random.uniform(.03, .045), datetime.date(2022, 1, 1) + relativedelta(months = random.randint(0, 24)), self.default_prob["standard"]) for x in range(100)]
@@ -336,14 +336,14 @@ class Fund:
     #Fund is modeled after ECC
     #all the numbers seen here are from ECCs financial statements
     #a share price of "None" sets the equity cap of ECC to their NAV
-    def __init__(self, default_prob, recovery_rate, share_price = None):
+    def __init__(self, recovery_rate, share_price = None):
         self.assets = 551031808
         self.equity_positions = 74
         self.debt_positions = 17
         self.positions = self.equity_positions + self.debt_positions
         self.senior_liabilities = (67815896, 31625000, 47118150, 45450000)
         self.net_assets = self.assets - np.sum(self.senior_liabilities)
-        self.clo_list = [CLO(default_prob, recovery_rate) for x in range(self.positions)]
+        self.clo_list = [CLO(recovery_rate) for x in range(self.positions)]
         self.position_size = self.assets / self.positions
         self.senior_coupons = (.066875, .0675, .0775, .0775)
         self.equity_cap = self.assets - np.sum(self.senior_liabilities) if share_price is None else share_price * 23647000
@@ -417,12 +417,11 @@ class Fund:
         return result
 
     #models a fund in 2d with a random default probability
-    def random_model2d(recovery_rate, iterations, default_prob_low = 0, default_prob_high = .06, share_price = None):
+    def random_model2d(recovery_rate, iterations, share_price = None):
         result = []
         for x in range(iterations):
-            print(x, iterations)
-            d = np.random.uniform(default_prob_low, default_prob_high)
-            result.append((d, dependent(d, recovery_rate, 1, share_price)))
+            print(x+1, iterations)
+            result.append(dependent(recovery_rate, 1, share_price))
         return result
 
     #x-axis is default probability, y-axis is irr, recovery rate is static
@@ -444,16 +443,6 @@ class Fund:
             for r in recovery_rates:
                 irrs = dependent(d, r, n, share_price)
                 print(d, r, np.average(irrs), np.std(irrs))
-
-
-    #uses a vector for default probs instead of numbers
-    def random_model2d_vector(recovery_rate, iterations, share_price = None):
-        result = []
-        for x in range(iterations):
-            print(x, iterations)
-            d = np.random.uniform(default_prob_low, default_prob_high)
-            result.append((d, dependent(d, recovery_rate, 1, share_price)))
-        return result
 
 
 '''

@@ -71,17 +71,16 @@ def dependent(default_prob, recovery_rate, n, share_price = None):
 class Loan:
 
     #integer, float, datetime
-    def __init__(self, size, margin, maturity, default_prob):
+    def __init__(self, size, margin, maturity):
         self.size = size
         self.margin = margin
         self.maturity = maturity
-        self.default_prob = default_prob
         self.defaulted = False
 
     #creates a list of dictionaries which represents a loan
     def gen_cash_flow(self, start_date, default_prob, recovery_rate):
         self.cash_flows = []
-        default_prob = (1-(1-self.default_prob)**(1/4))
+        default_prob = (1-(1-default_prob)**(1/4))
         while len(self.cash_flows)==0 or self.cash_flows[-1]['size']>0:
             self.cash_flows.append({})
             self.cash_flows[-1]['date'] = start_date
@@ -164,18 +163,10 @@ class CLO:
 
     #pre-input default prob and recovery rate are meant to be overridden, in there for simplicity
     #creates tranches with sizes based on an actual CLO
-    def __init__(self, default_prob = {"tech": 1, "health": 0, "standard": 0}, recovery_rate = .5):
+    def __init__(self, default_prob = 0, recovery_rate = .5):
         self.default_prob = default_prob
         self.recovery_rate = recovery_rate
-        self.assets = [Loan((1 + random.randint(2, 6)) * 1000000, random.uniform(.03, .045), datetime.date(2022, 1, 1) + relativedelta(months = random.randint(0, 24)), self.default_prob["standard"]) for x in range(100)]
-        m = 0
-        for key, value in self.default_prob.items():
-            if key is not "standard":
-                n = int(len(self.assets) * Fund.holdings[key])
-                for x in range(n):
-                    self.assets[m + x].default_prob = self.default_prob[key]
-                    print(m,x,self.assets[m+x].default_prob)
-                m += n
+        self.assets = [Loan((1 + random.randint(2, 6)) * 1000000, random.uniform(.03, .045), datetime.date(2022, 1, 1) + relativedelta(months = random.randint(0, 24))) for x in range(100)]
         s = self.size()
         #tranches by rating, Q is equity
         self.tranches = collections.OrderedDict([('A', {'size': s * .62, 'margin': .015, 'OCtrigger': 1.216}),
@@ -319,20 +310,6 @@ class CLO:
 
 class Fund:
 
-    #% of ECC's holdings in each industry (May 2019)
-    #for example, 10.6% of ECC's CLOs are in the tech industry
-    holdings = {}
-    holdings["tech"] = .106
-    holdings["health"] = .082
-    holdings["publishing"] = .07
-    holdings["telecomm"] = .054
-    holdings["finance"] = .053
-    holdings["hotel"] = .05
-    holdings["commercial"] = .042
-    holdings["development"] = .034
-    holdings["utilities"] = .034
-    holdings["chem"] = .032
-
     #Fund is modeled after ECC
     #all the numbers seen here are from ECCs financial statements
     #a share price of "None" sets the equity cap of ECC to their NAV
@@ -444,9 +421,6 @@ class Fund:
             for r in recovery_rates:
                 irrs = dependent(d, r, n, share_price)
                 print(d, r, np.average(irrs), np.std(irrs))
-
-
-
 
 
 
